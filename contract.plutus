@@ -1,0 +1,5 @@
+-- Sample Plutus contract code
+
+{-# INLINABLE sample #-}
+sample :: Integer -> Integer
+sample x = x + 1
