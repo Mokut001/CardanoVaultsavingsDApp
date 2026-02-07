@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #0b0e14;
+  --card: #161b22;
+  --accent: #21262d;
+}
+
+body {
+  background-color: var(--background);
+  color: #c9d1d9;
+  font-family: 'Inter', sans-serif;
+}
+
+.glass {
+  background: rgba(22, 27, 34, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(48, 54, 61, 0.5);
+}
