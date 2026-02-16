@@ -1,52 +1,60 @@
-import type { Express } from "express";
-import type { Server } from "http";
-import { storage } from "./storage";
-import { api } from "@shared/routes";
-import { z } from "zod";
+import { z } from 'zod';
+import { insertVaultSchema, vaults } from './schema';
 
-export async function registerRoutes(
-  httpServer: Server,
-  app: Express
-): Promise<Server> {
-  
-  app.get(api.vaults.getByAddress.path, async (req, res) => {
-    const address = req.params.address;
-    const vaults = await storage.getVaultsByAddress(address);
-    res.json(vaults);
-  });
+export const errorSchemas = {
+  validation: z.object({
+    message: z.string(),
+    field: z.string().optional(),
+  }),
+  notFound: z.object({
+    message: z.string(),
+  }),
+  internal: z.object({
+    message: z.string(),
+  }),
+};
 
-  app.post(api.vaults.create.path, async (req, res) => {
-    try {
-      const input = api.vaults.create.input.parse(req.body);
-      const vault = await storage.createVault(input);
-      res.status(201).json(vault);
-    } catch (err) {
-      if (err instanceof z.ZodError) {
-        return res.status(400).json({
-          message: err.errors[0].message,
-          field: err.errors[0].path.join('.'),
-        });
+export const api = {
+  vaults: {
+    getByAddress: {
+      method: 'GET' as const,
+      path: '/api/vaults/:address' as const,
+      responses: {
+        200: z.array(z.custom<typeof vaults.$inferSelect>()),
+      },
+    },
+    create: {
+      method: 'POST' as const,
+      path: '/api/vaults' as const,
+      input: insertVaultSchema,
+      responses: {
+        201: z.custom<typeof vaults.$inferSelect>(),
+        400: errorSchemas.validation,
+      },
+    },
+    update: {
+      method: 'PATCH' as const,
+      path: '/api/vaults/:id' as const,
+      input: z.object({
+        currentAmount: z.number().optional(),
+        isLocked: z.boolean().optional(),
+      }),
+      responses: {
+        200: z.custom<typeof vaults.$inferSelect>(),
+        404: errorSchemas.notFound,
+      },
+    },
+  },
+};
+
+export function buildUrl(path: string, params?: Record<string, string | number>): string {
+  let url = path;
+  if (params) {
+    Object.entries(params).forEach(([key, value]) => {
+      if (url.includes(`:${key}`)) {
+        url = url.replace(`:${key}`, String(value));
       }
-      throw err;
-    }
-  });
-
-  app.patch(api.vaults.update.path, async (req, res) => {
-    try {
-      const id = Number(req.params.id);
-      const input = api.vaults.update.input.parse(req.body);
-      const vault = await storage.updateVault(id, input);
-      res.json(vault);
-    } catch (err) {
-      if (err instanceof z.ZodError) {
-        return res.status(400).json({
-          message: err.errors[0].message,
-          field: err.errors[0].path.join('.'),
-        });
-      }
-      throw err;
-    }
-  });
-
-  return httpServer;
+    });
+  }
+  return url;
 }
